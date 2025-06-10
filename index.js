@@ -32,11 +32,33 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+    const VolunteerCollection = client.db("sebaConnectDB").collection('volunteers');
 
 
 
+    // ------------------volunteer management data api-------------------------//
 
 
+    //volunteer data get 
+    app.get('/volunteers',async(req,res)=>{
+      const email=req.query.email
+      const query={}
+      if(email){
+        query.OrganizerEmail=email
+      }
+      const cursor=VolunteerCollection.find(query)
+      const result=await cursor.toArray()
+      res.send(result)
+    })
+
+
+
+    //volunteer data post
+    app.post('/volunteers',async(req,res)=>{
+      const newVolunteer=req.body
+      const result=await VolunteerCollection.insertOne(newVolunteer)
+      res.send(result)
+    })
 
 
 
