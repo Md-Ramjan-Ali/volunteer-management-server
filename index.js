@@ -40,10 +40,13 @@ async function run() {
 
     //volunteer data get
     app.get("/volunteers", async (req, res) => {
-      const email = req.query.email;
+      const {email,search} = req.query;
       const query = {};
       if (email) {
         query.OrganizerEmail = email;
+      }
+      if(search){
+        query.title={$regex: search, $options: 'i'}
       }
       const cursor = VolunteerCollection.find(query);
       const result = await cursor.toArray();
