@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app=express()
 const port=process.env.PORT || 5000;
 
@@ -32,42 +32,47 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const VolunteerCollection = client.db("sebaConnectDB").collection('volunteers');
-
-
+    const VolunteerCollection = client
+      .db("sebaConnectDB")
+      .collection("volunteers");
 
     // ------------------volunteer management data api-------------------------//
 
-
-    //volunteer data get 
-    app.get('/volunteers',async(req,res)=>{
-      const email=req.query.email
-      const query={}
-      if(email){
-        query.OrganizerEmail=email
+    //volunteer data get
+    app.get("/volunteers", async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.OrganizerEmail = email;
       }
-      const cursor=VolunteerCollection.find(query)
-      const result=await cursor.toArray()
-      res.send(result)
-    })
+      const cursor = VolunteerCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
+    //get data home volunteers need now section
+    app.get("/volunteers/volunteerNeedNow", async (req, res) => {
+      const result = await VolunteerCollection.find()
+        .sort({ deadline: 1 })
+        .limit(6)
+        .toArray();
+      res.send(result);
+    });
 
+    //get volunteers single data
+    app.get("/volunteers/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await VolunteerCollection.findOne(query);
+      res.send(result);
+    });
 
     //volunteer data post
-    app.post('/volunteers',async(req,res)=>{
-      const newVolunteer=req.body
-      const result=await VolunteerCollection.insertOne(newVolunteer)
-      res.send(result)
-    })
-
-
-
-
-
-
-
-
-
+    app.post("/volunteers", async (req, res) => {
+      const newVolunteer = req.body;
+      const result = await VolunteerCollection.insertOne(newVolunteer);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
