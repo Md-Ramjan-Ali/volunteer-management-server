@@ -1,20 +1,13 @@
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const cors = require("cors");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const app=express()
-const port=process.env.PORT || 5000;
-
+const app = express();
+const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors())
-app.use(express.json())
-
-
-
-
-
-
+app.use(cors());
+app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_VOLUNTEER_NAME}:${process.env.DB_VOLUNTEER_PASSWORD}@brainbazzdatabase.ihuzu7m.mongodb.net/?retryWrites=true&w=majority&appName=BrainBazzDatabase`;
 
@@ -32,30 +25,34 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const VolunteerCollection = client
+    const VolunteerPostsCollection = client
       .db("sebaConnectDB")
       .collection("volunteers");
 
-    // ------------------volunteer management data api-------------------------//
+    const VolunteerRequestCollection = client
+      .db("sebaConnectDB")
+      .collection("requests");
+
+    // ------------------volunteer post data api-------------------------//
 
     //volunteer data get
     app.get("/volunteers", async (req, res) => {
-      const {email,search} = req.query;
+      const { email, search } = req.query;
       const query = {};
       if (email) {
         query.OrganizerEmail = email;
       }
-      if(search){
-        query.title={$regex: search, $options: 'i'}
+      if (search) {
+        query.title = { $regex: search, $options: "i" };
       }
-      const cursor = VolunteerCollection.find(query);
+      const cursor = VolunteerPostsCollection.find(query);
       const result = await cursor.toArray();
       res.send(result);
     });
 
     //get data home volunteers need now section
     app.get("/volunteers/volunteerNeedNow", async (req, res) => {
-      const result = await VolunteerCollection.find()
+      const result = await VolunteerPostsCollection.find()
         .sort({ deadline: 1 })
         .limit(6)
         .toArray();
@@ -66,16 +63,41 @@ async function run() {
     app.get("/volunteers/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await VolunteerCollection.findOne(query);
+      const result = await VolunteerPostsCollection.findOne(query);
       res.send(result);
     });
 
     //volunteer data post
     app.post("/volunteers", async (req, res) => {
       const newVolunteer = req.body;
-      const result = await VolunteerCollection.insertOne(newVolunteer);
+      const result = await VolunteerPostsCollection.insertOne(newVolunteer);
       res.send(result);
     });
+
+    // ------------------volunteer Request data api-------------------------//
+
+    // For submitting volunteer request
+    app.post("/volunteers/requests", async (req, res) => {
+      const requestsData = req.body;
+      const result = await VolunteerRequestCollection.insertOne(requestsData);
+      res.send(result);
+    });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -89,16 +111,10 @@ async function run() {
 }
 run().catch(console.dir);
 
+app.get("/", (req, res) => {
+  res.send("Volunteer management server side running");
+});
 
-
-
-
-
-
-app.get('/',(req,res)=>{
-  res.send('Volunteer management server side running')
-})
-
-app.listen(port,()=>{
+app.listen(port, () => {
   console.log(`Volunteer server port ${port}`);
-})
+});
