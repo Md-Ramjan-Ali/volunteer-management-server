@@ -74,6 +74,22 @@ async function run() {
       res.send(result);
     });
 
+    // Decrement volunteers count
+    app.patch("/volunteers/decrement/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+
+      const updateVolunteer = {
+        $inc: { volunteersNeeded: -1 },
+      };
+
+      const result = await VolunteerPostsCollection.updateOne(
+        filter,
+        updateVolunteer
+      );
+      res.send(result);
+    });
+
     // ------------------volunteer Request data api-------------------------//
 
     // For submitting volunteer request
@@ -82,22 +98,6 @@ async function run() {
       const result = await VolunteerRequestCollection.insertOne(requestsData);
       res.send(result);
     });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
