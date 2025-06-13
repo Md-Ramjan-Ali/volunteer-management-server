@@ -74,13 +74,32 @@ async function run() {
       res.send(result);
     });
 
-    // Decrement volunteers count
-    app.patch("/volunteers/decrement/:id", async (req, res) => {
+    // put updata
+    app.put("/volunteers/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateVolunteer = req.body;
+
+      const updateDoc = {
+        $set: updateVolunteer,
+      };
+
+      const result = await VolunteerPostsCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // increment volunteers count
+    app.patch("/volunteers/increment/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
 
       const updateVolunteer = {
-        $inc: { volunteersNeeded: -1 },
+        $inc: { volunteersNeeded: 1 },
       };
 
       const result = await VolunteerPostsCollection.updateOne(
@@ -90,12 +109,88 @@ async function run() {
       res.send(result);
     });
 
-    // ------------------volunteer Request data api-------------------------//
+    // delete volunteer post
+    app.delete("/volunteers/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await VolunteerPostsCollection.deleteOne(filter);
+      res.send(result);
+    });
 
-    // For submitting volunteer request
+    // ------------------volunteer Request data api-------------------------//
+    //
+
+    //get the All(unique) requested data
+    app.get("/requests", async (req, res) => {
+      const email = req.query.email;
+
+      const query = {};
+      if (email) {
+        query.volunteerEmail = email;
+      }
+
+      const cursor = VolunteerRequestCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // single data
+    app.get("/requests/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await VolunteerRequestCollection.findOne(query);
+      res.send(result);
+    });
+
+    //
+    //post volunteer request and decrement volunteer need number
     app.post("/volunteers/requests", async (req, res) => {
-      const requestsData = req.body;
-      const result = await VolunteerRequestCollection.insertOne(requestsData);
+      const requestData = req.body;
+      const postId = requestData._id;
+
+      if (!ObjectId.isValid(postId)) {
+        return res.status(400).send({ error: "Invalid post ID." });
+      }
+
+      const filter = { _id: new ObjectId(postId) };
+
+      try {
+        //  Step 1: Insert the volunteer request
+        const insertResult = await VolunteerRequestCollection.insertOne(
+          requestData
+        );
+        //Step 2: Decrement volunteersNeeded
+        const decrement = {
+          $inc: { volunteersNeeded: -1 },
+        };
+
+        //  Step 3: update volunteersNeeded
+        const updateResult = await VolunteerPostsCollection.updateOne(
+          filter,
+          decrement
+        );
+
+        res.send({
+          acknowledged: true,
+          requestInsertedId: insertResult.insertedId,
+          volunteersDecremented: updateResult.modifiedCount > 0,
+        });
+      } catch (error) {
+        console.error("Volunteer request error:", error);
+        res.status(500).send({
+          acknowledged: false,
+          error: "Something went wrong. Try again later.",
+        });
+      }
+    });
+
+    // delete request data
+
+    app.delete("/volunteers/requests/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: id };
+
+      const result = await VolunteerRequestCollection.deleteOne(query);
       res.send(result);
     });
 
