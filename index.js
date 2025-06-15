@@ -20,6 +20,31 @@ const client = new MongoClient(uri, {
   },
 });
 
+const admin = require("firebase-admin");
+const serviceAccount = require("./volunteer-management-web-service-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+const verifyFirebaseToken = async (req, res, next) => {
+  const authHeader = req.headers?.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    console.log("decoded token", decoded);
+    req.decoded = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -35,13 +60,11 @@ async function run() {
 
     // ------------------volunteer post data api-------------------------//
 
-    //volunteer data get
+    // volunteer all data get
     app.get("/volunteers", async (req, res) => {
-      const { email, search } = req.query;
+      const { search } = req.query;
+
       const query = {};
-      if (email) {
-        query.OrganizerEmail = email;
-      }
       if (search) {
         query.title = { $regex: search, $options: "i" };
       }
@@ -49,6 +72,35 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    //volunteer data get
+    app.get("/volunteers/myPost", verifyFirebaseToken, async (req, res) => {
+      const email = req.query.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
+      const query = {};
+      if (email) {
+        query.OrganizerEmail = email;
+      }
+      const cursor = VolunteerPostsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //volunteer data get search
+    // app.get("/volunteers/allVolunteer", async (req, res) => {
+    //   const { search } = req.query;
+    //   const query = {};
+    //   if (search) {
+    //     query.title = { $regex: search, $options: "i" };
+    //   }
+    //   const cursor = VolunteerPostsCollection.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
 
     //get data home volunteers need now section
     app.get("/volunteers/volunteerNeedNow", async (req, res) => {
@@ -108,6 +160,10 @@ async function run() {
     //get the All(unique) requested data
     app.get("/requests", async (req, res) => {
       const email = req.query.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
 
       const query = {};
       if (email) {
