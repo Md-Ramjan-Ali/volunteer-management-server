@@ -93,22 +93,6 @@ async function run() {
       res.send(result);
     });
 
-    // increment volunteers count
-    app.patch("/volunteers/increment/:id", async (req, res) => {
-      const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-
-      const updateVolunteer = {
-        $inc: { volunteersNeeded: 1 },
-      };
-
-      const result = await VolunteerPostsCollection.updateOne(
-        filter,
-        updateVolunteer
-      );
-      res.send(result);
-    });
-
     // delete volunteer post
     app.delete("/volunteers/:id", async (req, res) => {
       const id = req.params.id;
@@ -117,6 +101,7 @@ async function run() {
       res.send(result);
     });
 
+    //
     // ------------------volunteer Request data api-------------------------//
     //
 
@@ -145,25 +130,33 @@ async function run() {
     //
     //post volunteer request and decrement volunteer need number
     app.post("/volunteers/requests", async (req, res) => {
-      const requestData = req.body;
-      const postId = requestData._id;
+      const { _id, ...requestData } = req.body;
+      const reqId = _id;
+      console.log(requestData);
 
-      if (!ObjectId.isValid(postId)) {
+      if (!ObjectId.isValid(reqId)) {
         return res.status(400).send({ error: "Invalid post ID." });
       }
 
-      const filter = { _id: new ObjectId(postId) };
+      const isAlreadyAdded = await VolunteerRequestCollection.findOne({
+        reqId,
+        volunteerEmail: requestData.volunteerEmail,
+      });
+      if (isAlreadyAdded) {
+        return res.status(500).send({ message: "already added" });
+      }
+      const filter = { _id: new ObjectId(reqId) };
 
       try {
         //  Step 1: Insert the volunteer request
-        const insertResult = await VolunteerRequestCollection.insertOne(
-          requestData
-        );
+        const insertResult = await VolunteerRequestCollection.insertOne({
+          ...requestData,
+          reqId,
+        });
         //Step 2: Decrement volunteersNeeded
         const decrement = {
           $inc: { volunteersNeeded: -1 },
         };
-
         //  Step 3: update volunteersNeeded
         const updateResult = await VolunteerPostsCollection.updateOne(
           filter,
@@ -184,14 +177,53 @@ async function run() {
       }
     });
 
+    //
+    //
     // delete request data
 
     app.delete("/volunteers/requests/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: id };
 
-      const result = await VolunteerRequestCollection.deleteOne(query);
-      res.send(result);
+      try {
+        const query = { _id: new ObjectId(id) };
+
+        // First: Find the volunteer request to get the postId
+        const volunteerRequest = await VolunteerRequestCollection.findOne(
+          query
+        );
+
+        if (!volunteerRequest) {
+          return res
+            .status(404)
+            .send({ message: "Volunteer request not found" });
+        }
+
+        const reqId = volunteerRequest.reqId;
+        if (!reqId) {
+          return res
+            .status(400)
+            .send({ message: "No postId found in the request" });
+        }
+
+        // Second: Delete the volunteer request
+        const deleteResult = await VolunteerRequestCollection.deleteOne(query);
+
+        // Third: Increment the volunteersNeeded field in the related post
+        const filter = { _id: new ObjectId(reqId) };
+        const update = { $inc: { volunteersNeeded: 1 } };
+        const incrementResult = await VolunteerPostsCollection.updateOne(
+          filter,
+          update
+        );
+
+        res.send({
+          deleted: deleteResult,
+          incremented: incrementResult,
+        });
+      } catch (error) {
+        console.error("Error deleting volunteer request:", error);
+        res.status(500).send({ message: "Internal server error" });
+      }
     });
 
     // Send a ping to confirm a successful connection
