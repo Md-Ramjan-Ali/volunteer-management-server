@@ -56,9 +56,6 @@ const verifyTokenEmail = (req, res, next) => {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-
     const VolunteerPostsCollection = client
       .db("sebaConnectDB")
       .collection("volunteers");
@@ -99,18 +96,6 @@ async function run() {
         res.send(result);
       }
     );
-
-    //volunteer data get search
-    // app.get("/volunteers/allVolunteer", async (req, res) => {
-    //   const { search } = req.query;
-    //   const query = {};
-    //   if (search) {
-    //     query.title = { $regex: search, $options: "i" };
-    //   }
-    //   const cursor = VolunteerPostsCollection.find(query);
-    //   const result = await cursor.toArray();
-    //   res.send(result);
-    // });
 
     //get data home volunteers need now section
     app.get("/volunteers/volunteerNeedNow", async (req, res) => {
@@ -163,9 +148,7 @@ async function run() {
       res.send(result);
     });
 
-    //
     // ------------------volunteer Request data api-------------------------//
-    //
 
     //get the All(unique) requested data
     app.get(
@@ -243,8 +226,6 @@ async function run() {
       }
     });
 
-    //
-    //
     // delete request data
 
     app.delete("/volunteers/requests/:id", async (req, res) => {
@@ -291,15 +272,8 @@ async function run() {
         res.status(500).send({ message: "Internal server error" });
       }
     });
-
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    // console.log(
-    //   "Pinged your deployment. You successfully connected to MongoDB!"
-    // );
   } finally {
     // Ensures that the client will close when you finish/error
-    // await client.close();
   }
 }
 run().catch(console.dir);
