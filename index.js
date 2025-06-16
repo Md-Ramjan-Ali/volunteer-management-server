@@ -45,6 +45,13 @@ const verifyFirebaseToken = async (req, res, next) => {
   }
 };
 
+const verifyTokenEmail = (req, res, next) => {
+  if (req.query.email !== req.decoded.email) {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -74,21 +81,22 @@ async function run() {
     });
 
     //volunteer data get
-    app.get("/volunteers/myPost", verifyFirebaseToken, async (req, res) => {
-      const email = req.query.email;
+    app.get(
+      "/volunteers/myPost",
+      verifyFirebaseToken,
+      verifyTokenEmail,
+      async (req, res) => {
+        const email = req.query.email;
 
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "forbidden access" });
+        const query = {};
+        if (email) {
+          query.OrganizerEmail = email;
+        }
+        const cursor = VolunteerPostsCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
       }
-
-      const query = {};
-      if (email) {
-        query.OrganizerEmail = email;
-      }
-      const cursor = VolunteerPostsCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    );
 
     //volunteer data get search
     // app.get("/volunteers/allVolunteer", async (req, res) => {
@@ -158,22 +166,22 @@ async function run() {
     //
 
     //get the All(unique) requested data
-    app.get("/requests", async (req, res) => {
-      const email = req.query.email;
+    app.get(
+      "/requests",
+      verifyFirebaseToken,
+      verifyTokenEmail,
+      async (req, res) => {
+        const email = req.query.email;
+        const query = {};
+        if (email) {
+          query.volunteerEmail = email;
+        }
 
-      if (email !== req.decoded.email) {
-        return res.status(403).send({ message: "forbidden access" });
+        const cursor = VolunteerRequestCollection.find(query);
+        const result = await cursor.toArray();
+        res.send(result);
       }
-
-      const query = {};
-      if (email) {
-        query.volunteerEmail = email;
-      }
-
-      const cursor = VolunteerRequestCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result);
-    });
+    );
 
     // single data
     app.get("/requests/:id", async (req, res) => {
