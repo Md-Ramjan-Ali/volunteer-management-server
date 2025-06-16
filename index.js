@@ -37,7 +37,6 @@ const verifyFirebaseToken = async (req, res, next) => {
 
   try {
     const decoded = await admin.auth().verifyIdToken(token);
-    console.log("decoded token", decoded);
     req.decoded = decoded;
     next();
   } catch (error) {
@@ -120,7 +119,7 @@ async function run() {
     });
 
     //get volunteers single data
-    app.get("/volunteers/:id", async (req, res) => {
+    app.get("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await VolunteerPostsCollection.findOne(query);
@@ -135,7 +134,7 @@ async function run() {
     });
 
     // put updata
-    app.put("/volunteers/:id", async (req, res) => {
+    app.put("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
