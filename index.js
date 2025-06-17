@@ -191,22 +191,23 @@ async function run() {
         reqId,
         volunteerEmail: requestData.volunteerEmail,
       });
+      console.log(isAlreadyAdded);
       if (isAlreadyAdded) {
         return res.status(500).send({ message: "already added" });
       }
       const filter = { _id: new ObjectId(reqId) };
 
       try {
-        //  Step 1: Insert the volunteer request
+       
         const insertResult = await VolunteerRequestCollection.insertOne({
           ...requestData,
           reqId,
         });
-        //Step 2: Decrement volunteersNeeded
+       
         const decrement = {
           $inc: { volunteersNeeded: -1 },
         };
-        //  Step 3: update volunteersNeeded
+        
         const updateResult = await VolunteerPostsCollection.updateOne(
           filter,
           decrement
