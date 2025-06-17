@@ -32,6 +32,7 @@ admin.initializeApp({
 
 const verifyFirebaseToken = async (req, res, next) => {
   const authHeader = req.headers?.authorization;
+  console.log(authHeader);
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -141,7 +142,7 @@ async function run() {
     });
 
     // delete volunteer post
-    app.delete("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
+    app.delete("/volunteers/:id",verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await VolunteerPostsCollection.deleteOne(filter);
