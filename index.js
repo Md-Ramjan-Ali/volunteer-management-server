@@ -115,7 +115,7 @@ async function run() {
     });
 
     //volunteer data post
-    app.post("/volunteers", async (req, res) => {
+    app.post("/volunteers", verifyFirebaseToken, async (req, res) => {
       const newVolunteer = req.body;
       const result = await VolunteerPostsCollection.insertOne(newVolunteer);
       res.send(result);
@@ -141,7 +141,7 @@ async function run() {
     });
 
     // delete volunteer post
-    app.delete("/volunteers/:id", async (req, res) => {
+    app.delete("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await VolunteerPostsCollection.deleteOne(filter);
@@ -169,7 +169,7 @@ async function run() {
     );
 
     // single data
-    app.get("/requests/:id", async (req, res) => {
+    app.get("/requests/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await VolunteerRequestCollection.findOne(query);
@@ -178,7 +178,7 @@ async function run() {
 
     //
     //post volunteer request and decrement volunteer need number
-    app.post("/volunteers/requests", async (req, res) => {
+    app.post("/volunteers/requests", verifyFirebaseToken, async (req, res) => {
       const { _id, ...requestData } = req.body;
       const reqId = _id;
       console.log(requestData);
@@ -198,16 +198,15 @@ async function run() {
       const filter = { _id: new ObjectId(reqId) };
 
       try {
-       
         const insertResult = await VolunteerRequestCollection.insertOne({
           ...requestData,
           reqId,
         });
-       
+
         const decrement = {
           $inc: { volunteersNeeded: -1 },
         };
-        
+
         const updateResult = await VolunteerPostsCollection.updateOne(
           filter,
           decrement
@@ -229,50 +228,56 @@ async function run() {
 
     // delete request data
 
-    app.delete("/volunteers/requests/:id", async (req, res) => {
-      const id = req.params.id;
+    app.delete(
+      "/volunteers/requests/:id",
+      verifyFirebaseToken,
+      async (req, res) => {
+        const id = req.params.id;
 
-      try {
-        const query = { _id: new ObjectId(id) };
+        try {
+          const query = { _id: new ObjectId(id) };
 
-        // First: Find the volunteer request to get the postId
-        const volunteerRequest = await VolunteerRequestCollection.findOne(
-          query
-        );
+          // First: Find the volunteer request to get the postId
+          const volunteerRequest = await VolunteerRequestCollection.findOne(
+            query
+          );
 
-        if (!volunteerRequest) {
-          return res
-            .status(404)
-            .send({ message: "Volunteer request not found" });
+          if (!volunteerRequest) {
+            return res
+              .status(404)
+              .send({ message: "Volunteer request not found" });
+          }
+
+          const reqId = volunteerRequest.reqId;
+          if (!reqId) {
+            return res
+              .status(400)
+              .send({ message: "No postId found in the request" });
+          }
+
+          // Second: Delete the volunteer request
+          const deleteResult = await VolunteerRequestCollection.deleteOne(
+            query
+          );
+
+          // Third: Increment the volunteersNeeded field in the related post
+          const filter = { _id: new ObjectId(reqId) };
+          const update = { $inc: { volunteersNeeded: 1 } };
+          const incrementResult = await VolunteerPostsCollection.updateOne(
+            filter,
+            update
+          );
+
+          res.send({
+            deleted: deleteResult,
+            incremented: incrementResult,
+          });
+        } catch (error) {
+          console.error("Error deleting volunteer request:", error);
+          res.status(500).send({ message: "Internal server error" });
         }
-
-        const reqId = volunteerRequest.reqId;
-        if (!reqId) {
-          return res
-            .status(400)
-            .send({ message: "No postId found in the request" });
-        }
-
-        // Second: Delete the volunteer request
-        const deleteResult = await VolunteerRequestCollection.deleteOne(query);
-
-        // Third: Increment the volunteersNeeded field in the related post
-        const filter = { _id: new ObjectId(reqId) };
-        const update = { $inc: { volunteersNeeded: 1 } };
-        const incrementResult = await VolunteerPostsCollection.updateOne(
-          filter,
-          update
-        );
-
-        res.send({
-          deleted: deleteResult,
-          incremented: incrementResult,
-        });
-      } catch (error) {
-        console.error("Error deleting volunteer request:", error);
-        res.status(500).send({ message: "Internal server error" });
       }
-    });
+    );
   } finally {
     // Ensures that the client will close when you finish/error
   }
