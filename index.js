@@ -32,7 +32,7 @@ admin.initializeApp({
 
 const verifyFirebaseToken = async (req, res, next) => {
   const authHeader = req.headers?.authorization;
-  console.log(authHeader);
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -142,7 +142,7 @@ async function run() {
     });
 
     // delete volunteer post
-    app.delete("/volunteers/:id",verifyFirebaseToken, async (req, res) => {
+    app.delete("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const result = await VolunteerPostsCollection.deleteOne(filter);
@@ -182,7 +182,6 @@ async function run() {
     app.post("/volunteers/requests", verifyFirebaseToken, async (req, res) => {
       const { _id, ...requestData } = req.body;
       const reqId = _id;
-      console.log(requestData);
 
       if (!ObjectId.isValid(reqId)) {
         return res.status(400).send({ error: "Invalid post ID." });
@@ -192,7 +191,7 @@ async function run() {
         reqId,
         volunteerEmail: requestData.volunteerEmail,
       });
-      console.log(isAlreadyAdded);
+
       if (isAlreadyAdded) {
         return res.status(500).send({ message: "already added" });
       }
