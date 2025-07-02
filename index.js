@@ -69,14 +69,30 @@ async function run() {
 
     // volunteer all data get
     app.get("/volunteers", async (req, res) => {
-      const { search } = req.query;
+      const { search, sort, category } = req.query;
 
-      const query = {};
+      const filter = {};
+
+      // Search by title only
       if (search) {
-        query.title = { $regex: search, $options: "i" };
+        filter.title = { $regex: search, $options: "i" };
       }
-      const cursor = VolunteerPostsCollection.find(query);
-      const result = await cursor.toArray();
+
+      // Filter by category
+      if (category) {
+        filter.category = category;
+      }
+
+      const sortOption = {};
+      if (sort === "asc") {
+        sortOption.deadline = 1;
+      } else if (sort === "desc") {
+        sortOption.deadline = -1;
+      }
+      const result = await VolunteerPostsCollection.find(filter)
+        .sort(sortOption)
+        .toArray();
+
       res.send(result);
     });
 
