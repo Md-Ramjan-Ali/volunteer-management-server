@@ -1,4 +1,7 @@
 node_modules
 .env
+temp_auto_push.bat
 .vercel
 volunteer_management_service_key.json
+.gitignore
+temp_interactive_push.bat

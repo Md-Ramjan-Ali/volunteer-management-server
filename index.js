@@ -124,7 +124,7 @@ async function run() {
     });
 
     //get volunteers single data
-    app.get("/volunteers/:id", verifyFirebaseToken, async (req, res) => {
+    app.get("/volunteers/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await VolunteerPostsCollection.findOne(query);
