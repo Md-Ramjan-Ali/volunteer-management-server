@@ -118,7 +118,7 @@ async function run() {
     app.get("/volunteers/volunteerNeedNow", async (req, res) => {
       const result = await VolunteerPostsCollection.find()
         .sort({ deadline: 1 })
-        .limit(6)
+        .limit(8)
         .toArray();
       res.send(result);
     });
